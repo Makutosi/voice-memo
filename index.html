@@ -1,0 +1,37 @@
+<!-- voce memo / 21.3.2026 -->
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Voice Memo App</title>
+    <link rel="stylesheet" href="style.css">
+    <script src="script.js" defer></script>
+</head>
+<body>
+    <div class="container">
+        <h1>Voice Memo</h1>
+        <p id="status">Ready to record</p>
+        
+        <div class="controls">
+            <select id="language-select">
+                <option value="ja-JP">Japanese</option>
+                <option value="fi-FI">Finnish</option>
+                <option value="en-US">English</option>
+            </select>
+            <button id="start-btn">Start</button>
+            <button id="stop-btn" disabled>Stop</button>
+        </div>
+
+        <div id="transcript-container">
+            <div id="transcript" placeholder="Your ideas will appear here..."></div>
+        </div>
+        
+        <div class="footer-controls">
+            <button id="clear-btn">Clear All</button>
+            <button id="download-btn">Download .txt</button>
+        </div>
+    </div>
+</body>
+</html>
