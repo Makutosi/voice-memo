@@ -1,92 +1,189 @@
-/* voce memo / 21.3.2026 */
+/* Voice Memo App - Clean Final Version
+   - Single responsibility design
+   - Silence-based memo splitting
+   - Stable SpeechRecognition handling
+*/
 
-/**
- * Voice Memo App - Speech Recognition Logic
- */
+let memoCounter = 1;
+let isManuallyStopped = false;
 
-// [1] Initialize the counter at the top
-let memoCounter = 1; 
+let currentMemoElement = null;
+let accumulatedText = "";
 
-const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+// Silence detection (controls session splitting)
+let silenceTimer = null;
+const SILENCE_LIMIT = 2500; // 2.5 seconds
+
+const SpeechRecognition =
+    window.SpeechRecognition || window.webkitSpeechRecognition;
+
+console.log(SpeechRecognition);
 
 if (!SpeechRecognition) {
     alert("Speech Recognition is not supported in this browser.");
 } else {
     const recognition = new SpeechRecognition();
+
     recognition.continuous = true;
     recognition.interimResults = true;
 
-    const startBtn = document.getElementById('start-btn');
-    const stopBtn = document.getElementById('stop-btn');
-    const clearBtn = document.getElementById('clear-btn');
-    const downloadBtn = document.getElementById('download-btn');
-    const transcriptDiv = document.getElementById('transcript');
-    const status = document.getElementById('status');
-    const langSelect = document.getElementById('language-select');
-    const container = document.getElementById('transcript-container');
+    const startBtn = document.getElementById("start-btn");
+    const stopBtn = document.getElementById("stop-btn");
+    const clearBtn = document.getElementById("clear-btn");
+    const downloadBtn = document.getElementById("download-btn");
+    const transcriptDiv = document.getElementById("transcript");
+    const status = document.getElementById("status");
+    const langSelect = document.getElementById("language-select");
+    const container = document.getElementById("transcript-container");
 
+    /* START SESSION */
     recognition.onstart = () => {
+        console.log("START");
+
         status.innerText = "Listening...";
+        status.style.color = "#0ea5e9";
+
         startBtn.disabled = true;
         stopBtn.disabled = false;
+
+        isManuallyStopped = false;
+
+        // Create new memo block
+        const now = new Date();
+        const timestamp = `[${now.toLocaleTimeString([], {
+            hour: "2-digit",
+            minute: "2-digit",
+        })}]`;
+
+        currentMemoElement = document.createElement("div");
+        currentMemoElement.className = "memo-entry";
+
+        currentMemoElement.innerHTML = `
+            <span class="memo-id">[${memoCounter}] ${timestamp}</span>
+            <span class="memo-text"></span>
+        `;
+
+        transcriptDiv.appendChild(currentMemoElement);
+
+        accumulatedText = "";
+        memoCounter++;
     };
 
+    /* SPEECH RESULT HANDLER */
     recognition.onresult = (event) => {
-        let finalTranscript = '';
+        // Safety guard: ignore late events after session closed
+        if (!currentMemoElement) return;
 
-        for (let i = event.resultIndex; i < event.results.length; ++i) {
+        let interimText = "";
+
+        for (let i = event.resultIndex; i < event.results.length; i++) {
+            const transcript = event.results[i][0].transcript;
+
             if (event.results[i].isFinal) {
-                const now = new Date();
-                const timestamp = `[${now.toLocaleString()}] `;
-                
-                // [2] Add ID number and increment it
-                finalTranscript += `[${memoCounter}] ` + timestamp + event.results[i][0].transcript + '\n';
-                memoCounter++;
+                accumulatedText += transcript + " ";
+            } else {
+                interimText += transcript;
             }
         }
 
-        if (finalTranscript) {
-            transcriptDiv.innerText += finalTranscript;
-            container.scrollTop = container.scrollHeight;
+        // Update UI safely
+        const textSpan = currentMemoElement.querySelector(".memo-text");
+
+        if (textSpan) {
+            textSpan.innerHTML =
+                accumulatedText +
+                `<span style="color:#0ea5e9;">${interimText}</span>`;
         }
+
+        // Reset silence timer (core logic)
+        clearTimeout(silenceTimer);
+
+        silenceTimer = setTimeout(() => {
+            console.log("SILENCE DETECTED → CLOSE SESSION");
+
+            // Close current memo session
+            currentMemoElement = null;
+            accumulatedText = "";
+
+            // Stop recognition (will trigger onend)
+            recognition.stop();
+        }, SILENCE_LIMIT);
+
+        // Auto-scroll
+        container.scrollTop = container.scrollHeight;
     };
 
+    /* ERROR HANDLING */
     recognition.onerror = (event) => {
+        console.log("ERROR:", event.error);
+
+        if (event.error === "no-speech") return;
+
         status.innerText = "Error: " + event.error;
-        recognition.stop();
     };
 
+    /* SESSION END HANDLER (reconnect only) */
     recognition.onend = () => {
-        status.innerText = "Recognition stopped.";
-        startBtn.disabled = false;
-        stopBtn.disabled = true;
+        console.log("END");
+
+        // Manual stop = do nothing
+        if (isManuallyStopped) {
+            status.innerText = "Stopped.";
+            status.style.color = "";
+
+            startBtn.disabled = false;
+            stopBtn.disabled = true;
+            return;
+        }
+
+        // Auto-restart (important for continuous UX)
+        setTimeout(() => {
+            try {
+                recognition.start();
+            } catch (e) {
+                console.log("Restart blocked:", e.message);
+            }
+        }, 300);
     };
 
+    /* UI: START */
     startBtn.onclick = () => {
         recognition.lang = langSelect.value;
         recognition.start();
     };
 
+    /* UI: STOP */
     stopBtn.onclick = () => {
+        isManuallyStopped = true;
         recognition.stop();
     };
 
+    /* UI: CLEAR */
     clearBtn.onclick = () => {
-        if (confirm("Are you sure?")) {
-            transcriptDiv.innerText = "";
-            memoCounter = 1; // Reset counter when clearing
+        if (confirm("Clear all?")) {
+            transcriptDiv.innerHTML = "";
+            memoCounter = 1;
+            accumulatedText = "";
+            currentMemoElement = null;
         }
     };
 
+    /* UI: DOWNLOAD */
     downloadBtn.onclick = () => {
         const text = transcriptDiv.innerText;
         if (!text) return;
-        const blob = new Blob([text], { type: 'text/plain' });
+
+        const blob = new Blob([text], { type: "text/plain" });
         const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
+
+        const a = document.createElement("a");
         a.href = url;
-        a.download = 'my-voice-ideas.txt';
+        a.download = `my-ideas-${new Date()
+            .toISOString()
+            .slice(0, 10)}.txt`;
+
         a.click();
+
         URL.revokeObjectURL(url);
     };
 }
