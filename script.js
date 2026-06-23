@@ -1,5 +1,4 @@
 /*
-
 Voice Memo App
 Stage 1
 
@@ -19,6 +18,7 @@ let memoCounter = 1;
 let isManuallyStopped = false;
 
 let currentMemo = null;
+let recordingMemo = null;
 let accumulatedText = "";
 
 let silenceTimer = null;
@@ -42,16 +42,15 @@ window.webkitSpeechRecognition;
 if (!SpeechRecognition) {
 
 
-alert(
-    "Speech Recognition is not supported in this browser."
-);
+    alert(
+        "Speech Recognition is not supported in this browser."
+    );
 
 
 } else {
 
 
-const recognition =
-    new SpeechRecognition();
+const recognition = new SpeechRecognition();
 
 recognition.continuous = true;
 recognition.interimResults = true;
@@ -60,31 +59,21 @@ recognition.interimResults = true;
    DOM Elements
 ----------------------------------- */
 
-const startBtn =
-    document.getElementById("start-btn");
+const startBtn = document.getElementById("start-btn");
 
-const stopBtn =
-    document.getElementById("stop-btn");
+const stopBtn = document.getElementById("stop-btn");
 
-const clearBtn =
-    document.getElementById("clear-btn");
+const clearBtn = document.getElementById("clear-btn");
 
-const downloadBtn =
-    document.getElementById("download-btn");
+const downloadBtn = document.getElementById("download-btn");
 
-const transcriptDiv =
-    document.getElementById("transcript");
+const transcriptDiv = document.getElementById("transcript");
 
-const status =
-    document.getElementById("status");
+const status = document.getElementById("status");
 
-const langSelect =
-    document.getElementById("language-select");
+const langSelect = document.getElementById("language-select");
 
-const container =
-    document.getElementById(
-        "transcript-container"
-    );
+const container = document.getElementById("transcript-container");
 
 /* ----------------------------------
    Setup Audio Recorder
@@ -138,8 +127,7 @@ function createMemoCard() {
             minute: "2-digit"
         });
 
-    const card =
-        document.createElement("div");
+    const card = document.createElement("div");
 
     card.className = "memo-entry";
 
@@ -170,10 +158,12 @@ function createMemoCard() {
             )
     };
 
+    /* Keep reference until audio is saved */
+    recordingMemo = currentMemo;
+
     memoCounter++;
 
-    container.scrollTop =
-        container.scrollHeight;
+    container.scrollTop = container.scrollHeight;
 }
 
 /* ----------------------------------
@@ -182,27 +172,27 @@ function createMemoCard() {
 
 function handleAudioFinished() {
 
-    if (!currentMemo) return;
+    if (!recordingMemo) return;
 
     const blob =
         new Blob(audioChunks, {
             type: "audio/webm"
         });
 
-    const audioURL =
-        URL.createObjectURL(blob);
+    const audioURL = URL.createObjectURL(blob);
 
-    const audio =
-        document.createElement("audio");
+    const audio = document.createElement("audio");
 
     audio.controls = true;
+
     audio.src = audioURL;
 
-    currentMemo.audioContainer.appendChild(
-        audio
-    );
+    recordingMemo.audioContainer
+        .appendChild(audio);
 
     audioChunks = [];
+
+    recordingMemo = null;
 }
 
 /* ----------------------------------
@@ -304,20 +294,19 @@ recognition.onresult = (event) => {
     silenceTimer = setTimeout(
         () => {
 
-            currentMemo = null;
-
             accumulatedText = "";
 
             stopAudioRecording();
 
             recognition.stop();
 
+            currentMemo = null;
+
         },
         SILENCE_LIMIT
     );
 
-    container.scrollTop =
-        container.scrollHeight;
+    container.scrollTop = container.scrollHeight;
 };
 
 /* ----------------------------------
@@ -344,16 +333,13 @@ recognition.onend = () => {
 
     if (isManuallyStopped) {
 
-        status.innerText =
-            "Stopped";
+        status.innerText = "Stopped";
 
         status.style.color = "";
 
-        startBtn.disabled =
-            false;
+        startBtn.disabled = false;
 
-        stopBtn.disabled =
-            true;
+        stopBtn.disabled = true;
 
         return;
     }
@@ -378,8 +364,7 @@ recognition.onend = () => {
 
 startBtn.onclick = () => {
 
-    recognition.lang =
-        langSelect.value;
+    recognition.lang = langSelect.value;
 
     recognition.start();
 };
@@ -412,23 +397,19 @@ clearBtn.onclick = () => {
 
 downloadBtn.onclick = () => {
 
-    const text =
-        transcriptDiv.innerText;
+    const text = transcriptDiv.innerText;
 
     if (!text.trim()) return;
 
-    const blob =
-        new Blob([text], {
+    const blob = new Blob([text], {
             type: "text/plain"
         });
 
-    const url =
-        URL.createObjectURL(
+    const url = URL.createObjectURL(
             blob
         );
 
-    const a =
-        document.createElement("a");
+    const a = document.createElement("a");
 
     a.href = url;
 
