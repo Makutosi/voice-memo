@@ -16,15 +16,22 @@
         <p id="status">Ready to record</p>
         <p id="hint"></p>
         
-        <div class="controls">
-            <select id="language-select">
-                <option value="ja-JP">🇯🇵 Japanese</option>
-                <option value="en-US">🇺🇸 English</option>
-                <option value="fi-FI">🇫🇮 Finnish</option>
-            </select>
-            <button id="start-btn">Start</button>
-            <button id="stop-btn" disabled>Stop</button>
-        </div>
+    <div class="controls">
+
+        <label for="language-select" class="sr-only">
+            Language
+        </label>
+
+        <select id="language-select">
+            <option value="fi-FI">🇫🇮 Finnish</option>
+            <option value="en-US">🇺🇸 English</option>
+            <option value="ja-JP">🇯🇵 Japanese</option>
+        </select>
+
+        <button id="start-btn">Start</button>
+        <button id="stop-btn" disabled>Stop</button>
+
+    </div>
         <div id="transcript-container">
             <div id="transcript"></div>
         </div>
